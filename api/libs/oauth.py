@@ -1,9 +1,10 @@
 import urllib.parse
 from dataclasses import dataclass
 from typing import Optional
-from configs import dify_config
 
 import requests
+
+from configs import dify_config
 
 
 @dataclass
