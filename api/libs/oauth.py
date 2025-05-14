@@ -1,6 +1,7 @@
 import urllib.parse
 from dataclasses import dataclass
 from typing import Optional
+from configs import dify_config
 
 import requests
 
@@ -131,3 +132,40 @@ class GoogleOAuth(OAuth):
 
     def _transform_user_info(self, raw_info: dict) -> OAuthUserInfo:
         return OAuthUserInfo(id=str(raw_info["sub"]), name="", email=raw_info["email"])
+
+
+class FhaiOAuth(OAuth):
+    _AUTH_URL = "https://fhai.example.com/oauth/authorize"
+    _TOKEN_URL = "https://fhai.example.com/oauth/token"
+    # 只有这个是有效的，会被使用到，因此需要替换成fhai的真实的获取用户信息的地址
+    _USER_INFO_URL = f"http://127.0.0.1:8898/open/user-info?simpleKey={dify_config.FHAI_SIMPLE_KEY}"
+
+    # 暂时不需要这个接口
+    @DeprecationWarning
+    def get_authorization_url(self, invite_token: Optional[str] = None):
+        params = {
+            "client_id": self.client_id,
+            "redirect_uri": self.redirect_uri,
+            "response_type": "code",
+            "scope": "user_info",
+        }
+        if invite_token:
+            params["state"] = invite_token
+        return f"{self._AUTH_URL}?{urllib.parse.urlencode(params)}"
+
+    # 简化设计，直接fhai的code作为token
+    def get_access_token(self, code: str):
+        return code
+
+    def get_raw_user_info(self, token: str):
+        headers = {"Authorization": f"Bearer {token}"}
+        response = requests.get(self._USER_INFO_URL, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+    def _transform_user_info(self, raw_info: dict) -> OAuthUserInfo:
+        return OAuthUserInfo(
+            id=str(raw_info["data"]["oid"]),
+            name=raw_info["data"].get("account", ""),
+            email=raw_info["data"].get("email", ""),
+        )

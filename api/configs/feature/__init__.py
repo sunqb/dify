@@ -560,6 +560,22 @@ class AuthConfig(BaseSettings):
         default=None,
     )
 
+    
+    FHAI_CLIENT_ID: Optional[str] = Field(
+        description="Fhai OAuth client ID",
+        default=None,
+    )
+
+    FHAI_CLIENT_SECRET: Optional[str] = Field(
+        description="Fhai OAuth client secret",
+        default=None,
+    )
+
+    FHAI_SIMPLE_KEY: Optional[str] = Field(
+        description="Fhai simple key",
+        default=None,
+    ) 
+
     ACCESS_TOKEN_EXPIRE_MINUTES: PositiveInt = Field(
         description="Expiration time for access tokens in minutes",
         default=60,

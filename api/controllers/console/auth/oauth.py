@@ -14,7 +14,7 @@ from constants.languages import languages
 from events.tenant_event import tenant_was_created
 from extensions.ext_database import db
 from libs.helper import extract_remote_ip
-from libs.oauth import GitHubOAuth, GoogleOAuth, OAuthUserInfo
+from libs.oauth import GitHubOAuth, GoogleOAuth, OAuthUserInfo, FhaiOAuth
 from models import Account
 from models.account import AccountStatus
 from services.account_service import AccountService, RegisterService, TenantService
@@ -45,6 +45,16 @@ def get_oauth_providers():
             )
 
         OAUTH_PROVIDERS = {"github": github_oauth, "google": google_oauth}
+        if not dify_config.FHAI_CLIENT_ID or not dify_config.FHAI_CLIENT_SECRET:
+            fhai_oauth = None
+        else:
+            fhai_oauth = FhaiOAuth(
+                client_id=dify_config.FHAI_CLIENT_ID,
+                client_secret=dify_config.FHAI_CLIENT_SECRET,
+                redirect_uri=dify_config.CONSOLE_API_URL + "/console/api/oauth/authorize/fhai",
+            )
+        
+        OAUTH_PROVIDERS.update({"fhai": fhai_oauth})
         return OAUTH_PROVIDERS
 
 
@@ -78,6 +88,7 @@ class OAuthCallback(Resource):
         try:
             token = oauth_provider.get_access_token(code)
             user_info = oauth_provider.get_user_info(token)
+            logging.info(f"user_info is {user_info}")
         except requests.exceptions.RequestException as e:
             error_text = e.response.text if e.response else str(e)
             logging.exception(f"An error occurred during the OAuth process with {provider}: {error_text}")
@@ -128,6 +139,7 @@ class OAuthCallback(Resource):
             ip_address=extract_remote_ip(request),
         )
 
+        logging.info("redirect to 前端")
         return redirect(
             f"{dify_config.CONSOLE_WEB_URL}?access_token={token_pair.access_token}&refresh_token={token_pair.refresh_token}"
         )
